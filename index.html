@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Block Blast IPA - Mode 2 Pemain</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Font Inter & Fredoka -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Lexend:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Lexend', sans-serif;
+            background: linear-gradient(135deg, #0b0f19 0%, #111827 50%, #1e1035 100%);
+            color: #f8fafc;
+            user-select: none;
+            touch-action: manipulation;
+        }
+        .title-font {
+            font-family: 'Fredoka One', cursive;
+        }
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.75);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        /* Custom Block Styling */
+        .grid-cell {
+            background: rgba(30, 41, 59, 0.6);
+            border: 1px dashed rgba(255, 255, 255, 0.1);
+            transition: background-color 0.2s;
+        }
+        .shape-block {
+            cursor: pointer;
+            transition: transform 0.15s ease;
+        }
+        .shape-block:hover {
+            transform: scale(1.05);
+        }
+        .shake {
+            animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+        }
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+            40%, 60% { transform: translate3d(4px, 0, 0); }
+        }
+        /* Highlight Active Player Board */
+        .player-arena-active {
+            box-shadow: 0 0 20px rgba(168, 85, 247, 0.35);
+        }
+    </style>
+</head>
+<body class="h-screen w-screen overflow-hidden flex flex-col justify-between p-2 sm:p-4">
+
+    <!-- Top Header Bar -->
+    <header class="w-full glass-panel rounded-2xl p-2 sm:p-2.5 flex justify-between items-center shadow-lg z-10 shrink-0">
+        <div class="flex items-center space-x-2 sm:space-x-3">
+            <div class="bg-gradient-to-tr from-purple-600 to-pink-600 text-white p-1.5 sm:p-2 rounded-xl flex items-center justify-center shadow-md">
+                <i class="fa-solid fa-cubes-stacked text-lg sm:text-2xl"></i>
+            </div>
+            <div>
+                <h1 class="title-font text-base sm:text-xl text-purple-300 leading-none">BLOCK BLAST IPA - DUEL 2 PAPAN</h1>
+                <p class="text-[10px] sm:text-xs text-slate-400">Siklus Hidup & Metamorfosis Hewan (20 Soal)</p>
+            </div>
+        </div>
+
+        <!-- Audio Control -->
+        <div class="flex items-center space-x-2">
+            <button onclick="openQuestionListModal()" class="bg-purple-600 hover:bg-purple-500 text-white px-3 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition flex items-center space-x-1.5 shadow">
+                <i class="fa-solid fa-book-open"></i>
+                <span class="hidden sm:inline">Daftar Soal</span>
+            </button>
+            <button id="audio-toggle" onclick="toggleAudio()" class="bg-slate-700 hover:bg-slate-600 text-slate-200 p-2 rounded-xl transition flex items-center justify-center">
+                <i id="audio-icon" class="fa-solid fa-volume-xmark text-xs sm:text-base"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Game Arena -->
+    <main class="flex-1 my-2 w-full max-w-7xl mx-auto flex flex-col justify-between items-center relative overflow-hidden">
+
+        <!-- Turn Instruction Indicator -->
+        <div class="w-full text-center mb-1 shrink-0">
+            <span id="global-turn-indicator" class="text-xs sm:text-sm font-bold bg-cyan-500 text-slate-950 px-4 py-1 rounded-full shadow-lg transition-all duration-300 inline-block">
+                <i class="fa-solid fa-gamepad mr-1"></i> Giliran Pemain 1: Pilih balok & susun di Papan P1!
+            </span>
+        </div>
+
+        <!-- 2 Side-by-Side Arenas for Player 1 & Player 2 -->
+        <div class="w-full flex-1 grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-4 min-h-0 items-center">
+            
+            <!-- PLAYER 1 ARENA (LEFT) -->
+            <div id="p1-arena" class="glass-panel p-2 sm:p-3 rounded-2xl border-2 border-cyan-500/80 flex flex-col justify-between items-center h-full player-arena-active transition-all duration-300 overflow-y-auto">
+                <!-- P1 Score Header -->
+                <div class="w-full flex justify-between items-center bg-cyan-950/40 p-2 rounded-xl border border-cyan-500/30 mb-1">
+                    <div class="flex items-center space-x-2">
+                        <span class="bg-cyan-500 text-slate-950 font-black text-xs px-2 py-0.5 rounded">P1</span>
+                        <span class="text-xs font-bold text-cyan-300">PEMAIN 1</span>
+                    </div>
+                    <div class="text-right">
+                        <span id="p1-score" class="text-lg sm:text-xl font-extrabold text-cyan-300">0 Poin</span>
+                    </div>
+                </div>
+
+                <!-- P1 Grid (6x6) -->
+                <div id="board-grid-p1" class="grid grid-cols-6 gap-1 p-1.5 bg-slate-900/90 rounded-xl border border-cyan-500/30 shadow-inner max-w-[260px] sm:max-w-[280px] aspect-square w-full my-auto">
+                    <!-- JS Grid P1 -->
+                </div>
+
+                <!-- P1 Shapes Tray -->
+                <div class="w-full mt-1">
+                    <p class="text-[10px] text-cyan-400 font-semibold mb-1 text-center">Balok P1:</p>
+                    <div id="shapes-tray-p1" class="grid grid-cols-3 gap-1.5 w-full">
+                        <!-- JS Shapes P1 -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- PLAYER 2 ARENA (RIGHT) -->
+            <div id="p2-arena" class="glass-panel p-2 sm:p-3 rounded-2xl border-2 border-pink-500/30 opacity-60 flex flex-col justify-between items-center h-full transition-all duration-300 overflow-y-auto">
+                <!-- P2 Score Header -->
+                <div class="w-full flex justify-between items-center bg-pink-950/40 p-2 rounded-xl border border-pink-500/30 mb-1">
+                    <div class="flex items-center space-x-2">
+                        <span class="bg-pink-500 text-slate-950 font-black text-xs px-2 py-0.5 rounded">P2</span>
+                        <span class="text-xs font-bold text-pink-300">PEMAIN 2</span>
+                    </div>
+                    <div class="text-right">
+                        <span id="p2-score" class="text-lg sm:text-xl font-extrabold text-pink-300">0 Poin</span>
+                    </div>
+                </div>
+
+                <!-- P2 Grid (6x6) -->
+                <div id="board-grid-p2" class="grid grid-cols-6 gap-1 p-1.5 bg-slate-900/90 rounded-xl border border-pink-500/30 shadow-inner max-w-[260px] sm:max-w-[280px] aspect-square w-full my-auto">
+                    <!-- JS Grid P2 -->
+                </div>
+
+                <!-- P2 Shapes Tray -->
+                <div class="w-full mt-1">
+                    <p class="text-[10px] text-pink-400 font-semibold mb-1 text-center">Balok P2:</p>
+                    <div id="shapes-tray-p2" class="grid grid-cols-3 gap-1.5 w-full">
+                        <!-- JS Shapes P2 -->
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Question Modal Screen -->
+        <div id="question-modal" class="hidden absolute inset-0 w-full h-full flex items-center justify-center z-20 p-2 sm:p-4">
+            <div id="modal-panel" class="glass-panel w-full max-w-xl rounded-3xl p-4 sm:p-6 shadow-2xl border-2 border-purple-500/50 flex flex-col justify-between max-h-full overflow-y-auto">
+                
+                <!-- Modal Top info -->
+                <div class="flex justify-between items-center mb-3">
+                    <span id="current-player-tag" class="bg-cyan-500 text-slate-950 font-bold text-xs px-3 py-1 rounded-full shadow">
+                        Pemain 1 Menjawab
+                    </span>
+                    <span id="block-badge" class="bg-slate-800 text-slate-300 border border-slate-700 font-semibold text-xs px-3 py-1 rounded-full">
+                        Soal #1/20
+                    </span>
+                </div>
+
+                <!-- Question Title -->
+                <div class="my-2">
+                    <h2 id="question-text" class="text-sm sm:text-lg font-bold text-white text-center leading-relaxed">
+                        Pertanyaan...
+                    </h2>
+                </div>
+
+                <!-- Options -->
+                <div id="options-container" class="grid grid-cols-1 gap-2.5 my-3">
+                    <!-- Options JS -->
+                </div>
+
+                <!-- Feedback & Next Button -->
+                <div id="feedback-container" class="mt-2 text-center min-h-[45px] flex flex-col items-center justify-center">
+                    <div id="feedback-text" class="text-xs sm:text-sm font-semibold mb-2"></div>
+                    <button id="close-modal-btn" onclick="closeQuestionModal()" class="hidden bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 px-6 rounded-xl text-xs sm:text-sm transition shadow-lg">
+                        Oper Giliran <i class="fa-solid fa-arrow-right-arrow-left ml-1"></i>
+                    </button>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Winner Result Modal -->
+        <div id="result-screen" class="hidden absolute inset-0 w-full h-full glass-panel rounded-3xl flex flex-col items-center justify-center p-6 text-center z-30">
+            <div class="bg-purple-600/20 border-2 border-purple-500 p-6 rounded-full mb-3 animate-pulse">
+                <i class="fa-solid fa-crown text-5xl text-amber-400"></i>
+            </div>
+            <h2 id="winnerText" class="title-font text-2xl sm:text-4xl text-white mb-2">PEMAIN 1 MENANG!</h2>
+            <p class="text-slate-300 text-xs sm:text-sm max-w-md mb-6">Pertandingan Block Blast IPA Dual Papan Selesai!</p>
+
+            <div class="glass-panel p-4 rounded-2xl mb-6 flex space-x-8 border border-purple-500/30">
+                <div class="text-center">
+                    <p class="text-xs text-cyan-400 font-bold uppercase">Pemain 1</p>
+                    <p id="final-p1" class="text-2xl font-extrabold text-white">0 Poin</p>
+                </div>
+                <div class="border-r border-slate-700"></div>
+                <div class="text-center">
+                    <p class="text-xs text-pink-400 font-bold uppercase">Pemain 2</p>
+                    <p id="final-p2" class="text-2xl font-extrabold text-white">0 Poin</p>
+                </div>
+            </div>
+
+            <button onclick="resetGame()" class="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-3 px-8 rounded-2xl shadow-lg transition transform hover:scale-105 text-sm">
+                <i class="fa-solid fa-rotate-right mr-2"></i> Tanding Lagi
+            </button>
+        </div>
+
+        <!-- Question List Modal (Daftar 20 Soal & Kunci) -->
+        <div id="question-list-modal" class="hidden absolute inset-0 w-full h-full flex items-center justify-center z-40 p-2 sm:p-4 bg-slate-950/80 backdrop-blur-md">
+            <div class="glass-panel w-full max-w-3xl rounded-3xl p-4 sm:p-6 shadow-2xl border-2 border-purple-500/50 flex flex-col h-[90vh]">
+                
+                <!-- Header -->
+                <div class="flex justify-between items-center mb-4 pb-2 border-b border-slate-700/60">
+                    <div class="flex items-center space-x-2">
+                        <div class="bg-purple-600 text-white p-2 rounded-xl">
+                            <i class="fa-solid fa-book-open text-base"></i>
+                        </div>
+                        <div>
+                            <h2 class="title-font text-base sm:text-lg text-white">Daftar 20 Soal IPA & Kunci Jawaban</h2>
+                            <p class="text-[10px] sm:text-xs text-slate-400">Materi Siklus Hidup & Metamorfosis Hewan</p>
+                        </div>
+                    </div>
+                    <button onclick="closeQuestionListModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 w-8 h-8 rounded-full flex items-center justify-center transition">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <!-- Scrollable Question List Container -->
+                <div id="question-list-container" class="flex-1 overflow-y-auto pr-2 space-y-3">
+                    <!-- JS populated -->
+                </div>
+
+                <!-- Footer close -->
+                <div class="mt-4 pt-2 border-t border-slate-700/60 text-right">
+                    <button onclick="closeQuestionListModal()" class="bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 px-6 rounded-xl text-xs transition shadow">
+                        Tutup
+                    </button>
+                </div>
+
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="w-full text-center text-slate-500 text-[10px] sm:text-xs py-1 shrink-0">
+        Block Blast Dual Board IPA &copy; Game Edukasi Metamorfosis Hewan
+    </footer>
+
+    <!-- Game Logic & Web Audio API -->
+    <script>
+        // --- 20 SOAL IPA METAMORFOSIS & SIKLUS HIDUP ---
+        const questionsData = [
+            {
+                q: "Manakah urutan tahapan metamorfosis sempurna yang benar?",
+                options: ["Telur - Larva - Pupa - Dewasa", "Telur - Nimfa - Dewasa", "Telur - Pupa - Larva - Dewasa", "Larva - Telur - Pupa - Dewasa"],
+                answer: 0,
+                explain: "Metamorfosis sempurna melewati 4 tahap: Telur -> Larva -> Pupa (kepompong) -> Dewasa."
+            },
+            {
+                q: "Hewan berikut yang mengalami metamorfosis TIDAK sempurna adalah...",
+                options: ["Kupu-kupu", "Belalang", "Nyamuk", "Lalat"],
+                answer: 1,
+                explain: "Belalang hanya melewati tahap Telur -> Nimfa -> Dewasa (tanpa pupa)."
+            },
+            {
+                q: "Hewan manakah yang dalam hidupnya TIDAK mengalami metamorfosis?",
+                options: ["Katak", "Kucing", "Nyamuk", "Kumbang"],
+                answer: 1,
+                explain: "Kucing lahir dalam wujud yang mirip induknya dan tumbuh tanpa metamorfosis."
+            },
+            {
+                q: "Tahap perkembangbiakan nyamuk setelah telur menetas adalah...",
+                options: ["Nimfa", "Pupa", "Jentik-jentik (Larva)", "Nyamuk Dewasa"],
+                answer: 2,
+                explain: "Telur nyamuk menetas menjadi jentik-jentik yang hidup di air."
+            },
+            {
+                q: "Perbedaan utama metamorfosis sempurna dan tidak sempurna adalah adanya fase...",
+                options: ["Telur", "Dewasa", "Pupa (Kepompong)", "Nimfa"],
+                answer: 2,
+                explain: "Fase kepompong/pupa hanya ditemukan pada metamorfosis sempurna."
+            },
+            {
+                q: "Hewan amfibi yang mengalami metamorfosis sempurna dari berudu hingga dewasa adalah...",
+                options: ["Katak", "Ular", "Ikan", "Kura-kura"],
+                answer: 0,
+                explain: "Katak mengalami metamorfosis sempurna: Telur -> Berudu -> Katak Muda -> Katak Dewasa."
+            },
+            {
+                q: "Hewan yang bentuk anaknya (nimfa) mirip dengan bentuk dewasa tetapi ukuran lebih kecil adalah...",
+                options: ["Kupu-kupu", "Kecoa", "Lalat", "Katak"],
+                answer: 1,
+                explain: "Nimfa kecoa sangat mirip dengan kecoa dewasa tetapi belum memiliki sayap sempurna."
+            },
+            {
+                q: "Ulat pada metamorfosis kupu-kupu merupakan fase...",
+                options: ["Pupa", "Dewasa", "Nimfa", "Larva"],
+                answer: 3,
+                explain: "Ulat adalah tahap larva pada metamorfosis sempurna kupu-kupu."
+            },
+            {
+                q: "Unggas seperti Ayam dan Bebek berkembang biak dengan bertelur dan mengalami...",
+                options: ["Metamorfosis Sempurna", "Metamorfosis Tidak Sempurna", "Tanpa Metamorfosis", "Metamorfosis Ganda"],
+                answer: 2,
+                explain: "Ayam dan bebek tidak mengalami metamorfosis karena wujud anak saat menetas sama seperti induk."
+            },
+            {
+                q: "Capung mengalami metamorfosis tidak sempurna. Tahapan hidup capung yang benar adalah...",
+                options: ["Telur - Larva - Pupa - Dewasa", "Telur - Nimfa - Dewasa", "Telur - Pupa - Dewasa", "Nimfa - Telur - Dewasa"],
+                answer: 1,
+                explain: "Tahap capung: Telur -> Nimfa -> Dewasa."
+            },
+            {
+                q: "Kelompok hewan serangga seperti belalang, kecoa, dan nyamuk bernapas menggunakan alat pernapasan berupa...",
+                options: ["Insang", "Paru-paru", "Trakea", "Kulit"],
+                answer: 2,
+                explain: "Serangga menggunakan sistem trakea (tabung udara) sebagai alat pernapasan utama mereka."
+            },
+            {
+                q: "Tahap diam/istirahat saat hewan mengorganisir ulang jaringan tubuhnya disebut...",
+                options: ["Larva", "Nimfa", "Pupa", "Imago"],
+                answer: 2,
+                explain: "Pupa (kepompong) adalah tahap transisi menuju bentuk imago (dewasa)."
+            },
+            {
+                q: "Manakah kelompok hewan yang SEMUANYA mengalami metamorfosis sempurna?",
+                options: ["Kupu-kupu, Nyamuk, Lalat", "Belalang, Kecoa, Capung", "Kucing, Ayam, Sapi", "Katak, Belalang, Nyamuk"],
+                answer: 0,
+                explain: "Kupu-kupu, nyamuk, dan lalat mengalami 4 tahap metamorfosis sempurna."
+            },
+            {
+                q: "Manakah kelompok hewan yang SEMUANYA TIDAK mengalami metamorfosis?",
+                options: ["Kambing, Ayam, Kadal", "Kupu-kupu, Katak, Lalat", "Belalang, Kecoa, Jangkrik", "Nyamuk, Semut, Lebah"],
+                answer: 0,
+                explain: "Kambing, ayam, dan kadal tidak mengalami metamorfosis."
+            },
+            {
+                q: "Jangkrik muda yang belum memiliki sayap sempurna disebut...",
+                options: ["Larva", "Nimfa", "Pupa", "Berudu"],
+                answer: 1,
+                explain: "Anak serangga pada metamorfosis tidak sempurna disebut nimfa."
+            },
+            {
+                q: "Berudu bernapas menggunakan ... sedangkan katak dewasa bernapas menggunakan ...",
+                options: ["Paru-paru ; Insang", "Insang ; Paru-paru & Kulit", "Kulit ; Insang", "Trakea ; Paru-paru"],
+                answer: 1,
+                explain: "Berudu di air menggunakan insang, katak dewasa menggunakan paru-paru dan kulit."
+            },
+            {
+                q: "Lebah madu mengalami tahapan metamorfosis jenis apa?",
+                options: ["Metamorfosis Sempurna", "Metamorfosis Tidak Sempurna", "Tanpa Metamorfosis", "Metamorfosis Sebagian"],
+                answer: 0,
+                explain: "Lebah melewati 4 fase sempurna: Telur -> Larva -> Pupa -> Dewasa."
+            },
+            {
+                q: "Apa yang dimaksud dengan unggas dalam kelompok hewan?",
+                options: ["Hewan berkaki empat yang menyusui", "Kelompok hewan bertulang belakang yang berbulu dan umumnya bersayap", "Hewan yang hidup di air dan bernapas dengan insang", "Hewan melata yang kulitnya bersisik"],
+                answer: 1,
+                explain: "Unggas adalah jenis hewan bervertebrata yang memiliki bulu dan sayap, seperti ayam, bebek, dan burung."
+            },
+            {
+                q: "Tahap metamorfosis nyamuk yang dapat menyebarkan penyakit pada manusia adalah...",
+                options: ["Telur", "Jentik-jentik", "Pupa", "Nyamuk Dewasa (Imago)"],
+                answer: 3,
+                explain: "Nyamuk dewasa betina menggigit dan dapat memindahkan patogen penyakit."
+            },
+            {
+                q: "Metamorfosis sempurna pada serangga terdiri dari berapa tahapan?",
+                options: ["2 Tahap", "3 Tahap", "4 Tahap", "5 Tahap"],
+                answer: 2,
+                explain: "Metamorfosis sempurna pada serangga terdiri dari 4 tahap, yaitu telur, larva, pupa, dan dewasa (imago)."
+            }
+        ];
+
+        // --- QUESTION LIST MODAL FUNCTIONS ---
+        function openQuestionListModal() {
+            playSFX('blast');
+            const container = document.getElementById('question-list-container');
+            container.innerHTML = '';
+
+            questionsData.forEach((item, index) => {
+                const card = document.createElement('div');
+                card.className = "bg-slate-900/80 border border-slate-800 p-3.5 rounded-2xl";
+                
+                let optionsHtml = '';
+                item.options.forEach((opt, optIdx) => {
+                    const isCorrect = optIdx === item.answer;
+                    optionsHtml += `
+                        <div class="text-xs py-1 px-2 rounded ${isCorrect ? 'bg-emerald-950/60 text-emerald-300 font-bold border border-emerald-500/40' : 'text-slate-400'}">
+                            ${optIdx + 1}. ${opt} ${isCorrect ? '<i class="fa-solid fa-check ml-1 text-emerald-400"></i>' : ''}
+                        </div>
+                    `;
+                });
+
+                card.innerHTML = `
+                    <div class="flex items-start justify-between mb-2">
+                        <span class="bg-purple-500/20 text-purple-300 border border-purple-500/30 font-bold text-[10px] px-2 py-0.5 rounded-full">Soal #${index + 1}</span>
+                    </div>
+                    <p class="text-xs sm:text-sm font-semibold text-white mb-2">${item.q}</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5 mb-2">${optionsHtml}</div>
+                    <div class="bg-slate-950/50 p-2 rounded-xl border border-slate-800 text-[11px] text-slate-300">
+                        <span class="text-cyan-400 font-bold">Penjelasan:</span> ${item.explain}
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+
+            document.getElementById('question-list-modal').classList.remove('hidden');
+        }
+
+        function closeQuestionListModal() {
+            playSFX('blast');
+            document.getElementById('question-list-modal').classList.add('hidden');
+        }
+
+        // --- GAME STATE ---
+        let currentPlayer = 1; // 1 or 2
+        let p1Score = 0;
+        let p2Score = 0;
+        let activeQuestionIndex = null;
+        let questionsAnswered = 0;
+        let isAudioPlaying = false;
+
+        // Dual Board States (6x6 Grids)
+        const GRID_SIZE = 6;
+        let boardStateP1 = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(null));
+        let boardStateP2 = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(null));
+
+        let availableShapesP1 = [];
+        let availableShapesP2 = [];
+        let selectedShapeIndexP1 = null;
+        let selectedShapeIndexP2 = null;
+
+        // Shape Templates
+        const SHAPE_PRESETS_P1 = [
+            { shape: [[1]], color: 'from-cyan-400 to-blue-600' },
+            { shape: [[1, 1]], color: 'from-cyan-500 to-teal-600' },
+            { shape: [[1], [1]], color: 'from-blue-500 to-indigo-600' },
+            { shape: [[1, 1, 1]], color: 'from-sky-400 to-blue-600' },
+            { shape: [[1, 1], [1, 1]], color: 'from-teal-400 to-cyan-600' },
+            { shape: [[1, 1], [1, 0]], color: 'from-blue-400 to-indigo-600' }
+        ];
+
+        const SHAPE_PRESETS_P2 = [
+            { shape: [[1]], color: 'from-pink-400 to-rose-600' },
+            { shape: [[1, 1]], color: 'from-pink-500 to-purple-600' },
+            { shape: [[1], [1]], color: 'from-purple-500 to-rose-600' },
+            { shape: [[1, 1, 1]], color: 'from-fuchsia-400 to-pink-600' },
+            { shape: [[1, 1], [1, 1]], color: 'from-rose-400 to-pink-600' },
+            { shape: [[1, 1], [1, 0]], color: 'from-purple-400 to-pink-600' }
+        ];
+
+        // --- WEB AUDIO API SYNTHESIZER ---
+        let audioCtx = null;
+        let bgmTimer = null;
+        const bgmNotes = [261.63, 329.63, 392.00, 523.25, 440.00, 349.23, 329.63, 293.66];
+        let noteIdx = 0;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function playSFX(type) {
+            initAudio();
+            if (!audioCtx) return;
+
+            const now = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            if (type === 'blast') {
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(300, now);
+                osc.frequency.exponentialRampToValueAtTime(100, now + 0.15);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.15);
+                osc.start(now);
+                osc.stop(now + 0.15);
+            } else if (type === 'correct') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(523.25, now);
+                osc.frequency.setValueAtTime(659.25, now + 0.08);
+                osc.frequency.setValueAtTime(783.99, now + 0.16);
+                gain.gain.setValueAtTime(0.25, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.3);
+                osc.start(now);
+                osc.stop(now + 0.3);
+            } else if (type === 'wrong') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(250, now);
+                osc.frequency.linearRampToValueAtTime(120, now + 0.2);
+                gain.gain.setValueAtTime(0.25, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.2);
+                osc.start(now);
+                osc.stop(now + 0.2);
+            }
+        }
+
+        function playBGM() {
+            if (!isAudioPlaying) return;
+            initAudio();
+
+            const now = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(bgmNotes[noteIdx], now);
+            
+            gain.gain.setValueAtTime(0.02, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            osc.start(now);
+            osc.stop(now + 0.3);
+
+            noteIdx = (noteIdx + 1) % bgmNotes.length;
+            bgmTimer = setTimeout(playBGM, 400);
+        }
+
+        function toggleAudio() {
+            isAudioPlaying = !isAudioPlaying;
+            const icon = document.getElementById('audio-icon');
+
+            if (isAudioPlaying) {
+                icon.className = 'fa-solid fa-volume-high text-purple-400 text-xs sm:text-base';
+                playBGM();
+            } else {
+                icon.className = 'fa-solid fa-volume-xmark text-slate-400 text-xs sm:text-base';
+                if (bgmTimer) clearTimeout(bgmTimer);
+            }
+        }
+
+        // --- SHAPE TRAY GENERATION ---
+        function generateTrayShapes(playerNum) {
+            const presets = playerNum === 1 ? SHAPE_PRESETS_P1 : SHAPE_PRESETS_P2;
+            const shapes = [];
+            for (let i = 0; i < 3; i++) {
+                const randomPreset = presets[Math.floor(Math.random() * presets.length)];
+                shapes.push(JSON.parse(JSON.stringify(randomPreset)));
+            }
+            if (playerNum === 1) availableShapesP1 = shapes;
+            else availableShapesP2 = shapes;
+            renderTrays();
+        }
+
+        function renderTrays() {
+            // Render P1 Tray
+            const tray1 = document.getElementById('shapes-tray-p1');
+            tray1.innerHTML = '';
+            availableShapesP1.forEach((item, index) => {
+                tray1.appendChild(createShapeCard(item, index, 1));
+            });
+
+            // Render P2 Tray
+            const tray2 = document.getElementById('shapes-tray-p2');
+            tray2.innerHTML = '';
+            availableShapesP2.forEach((item, index) => {
+                tray2.appendChild(createShapeCard(item, index, 2));
+            });
+        }
+
+        function createShapeCard(item, index, playerNum) {
+            const card = document.createElement('div');
+            const isSelected = playerNum === 1 ? selectedShapeIndexP1 === index : selectedShapeIndexP2 === index;
+
+            if (!item) {
+                card.className = "glass-panel rounded-lg h-14 opacity-20 border border-slate-800 flex items-center justify-center";
+                card.innerHTML = `<i class="fa-solid fa-check text-slate-600 text-xs"></i>`;
+            } else {
+                const isMyTurn = currentPlayer === playerNum;
+                const borderCol = playerNum === 1 ? 'border-cyan-500 bg-cyan-900/30' : 'border-pink-500 bg-pink-900/30';
+                card.className = `shape-block glass-panel rounded-lg h-14 p-1 border flex items-center justify-center transition ${isSelected ? `ring-2 ${borderCol}` : 'border-slate-700/60 hover:border-slate-500'} ${!isMyTurn ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`;
+                
+                const rows = item.shape.length;
+                const cols = item.shape[0].length;
+                
+                let miniGrid = `<div class="grid gap-0.5" style="grid-template-columns: repeat(${cols}, minmax(0, 1fr));">`;
+                for (let r = 0; r < rows; r++) {
+                    for (let c = 0; c < cols; c++) {
+                        if (item.shape[r][c] === 1) {
+                            miniGrid += `<div class="w-3 h-3 rounded-sm bg-gradient-to-tr ${item.color}"></div>`;
+                        } else {
+                            miniGrid += `<div class="w-3 h-3"></div>`;
+                        }
+                    }
+                }
+                miniGrid += `</div>`;
+                card.innerHTML = miniGrid;
+                
+                card.onclick = () => {
+                    if (currentPlayer === playerNum) {
+                        selectTrayShape(index, playerNum);
+                    }
+                };
+            }
+            return card;
+        }
+
+        function selectTrayShape(index, playerNum) {
+            if (playerNum === 1) {
+                if (!availableShapesP1[index]) return;
+                selectedShapeIndexP1 = index;
+            } else {
+                if (!availableShapesP2[index]) return;
+                selectedShapeIndexP2 = index;
+            }
+            playSFX('blast');
+            renderTrays();
+        }
+
+        // --- DUAL BOARD RENDER & PLACEMENT ---
+        function renderBoards() {
+            // Render Board P1
+            const board1 = document.getElementById('board-grid-p1');
+            board1.innerHTML = '';
+            for (let r = 0; r < GRID_SIZE; r++) {
+                for (let c = 0; c < GRID_SIZE; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = "grid-cell rounded flex items-center justify-center transition relative";
+                    if (boardStateP1[r][c] !== null) {
+                        cell.className = `grid-cell rounded flex items-center justify-center bg-gradient-to-br ${boardStateP1[r][c].color} shadow-sm`;
+                    }
+                    cell.onclick = () => {
+                        if (currentPlayer === 1) placeShapeOnBoard(r, c, 1);
+                    };
+                    board1.appendChild(cell);
+                }
+            }
+
+            // Render Board P2
+            const board2 = document.getElementById('board-grid-p2');
+            board2.innerHTML = '';
+            for (let r = 0; r < GRID_SIZE; r++) {
+                for (let c = 0; c < GRID_SIZE; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = "grid-cell rounded flex items-center justify-center transition relative";
+                    if (boardStateP2[r][c] !== null) {
+                        cell.className = `grid-cell rounded flex items-center justify-center bg-gradient-to-br ${boardStateP2[r][c].color} shadow-sm`;
+                    }
+                    cell.onclick = () => {
+                        if (currentPlayer === 2) placeShapeOnBoard(r, c, 2);
+                    };
+                    board2.appendChild(cell);
+                }
+            }
+        }
+
+        function canPlace(shape, startR, startC, playerNum) {
+            const rows = shape.length;
+            const cols = shape[0].length;
+            const bState = playerNum === 1 ? boardStateP1 : boardStateP2;
+
+            if (startR + rows > GRID_SIZE || startC + cols > GRID_SIZE) return false;
+
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    if (shape[r][c] === 1 && bState[startR + r][startC + c] !== null) {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        function placeShapeOnBoard(startR, startC, playerNum) {
+            const selectedIdx = playerNum === 1 ? selectedShapeIndexP1 : selectedShapeIndexP2;
+            const shapesTray = playerNum === 1 ? availableShapesP1 : availableShapesP2;
+
+            if (selectedIdx === null || !shapesTray[selectedIdx]) return;
+
+            const selected = shapesTray[selectedIdx];
+            if (!canPlace(selected.shape, startR, startC, playerNum)) {
+                playSFX('wrong');
+                return;
+            }
+
+            playSFX('blast');
+            const rows = selected.shape.length;
+            const cols = selected.shape[0].length;
+            const bState = playerNum === 1 ? boardStateP1 : boardStateP2;
+
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    if (selected.shape[r][c] === 1) {
+                        bState[startR + r][startC + c] = { color: selected.color };
+                    }
+                }
+            }
+
+            if (playerNum === 1) {
+                availableShapesP1[selectedIdx] = null;
+                selectedShapeIndexP1 = null;
+            } else {
+                availableShapesP2[selectedIdx] = null;
+                selectedShapeIndexP2 = null;
+            }
+
+            renderBoards();
+            renderTrays();
+
+            // Trigger question mode after placing shape
+            setTimeout(() => {
+                triggerQuestionModal();
+            }, 200);
+        }
+
+        function triggerQuestionModal() {
+            activeQuestionIndex = questionsAnswered % questionsData.length;
+            const q = questionsData[activeQuestionIndex];
+
+            const playerTag = document.getElementById('current-player-tag');
+            const modalPanel = document.getElementById('modal-panel');
+
+            if (currentPlayer === 1) {
+                playerTag.className = "bg-cyan-500 text-slate-950 font-bold text-xs px-3 py-1 rounded-full shadow";
+                playerTag.innerText = "Pemain 1 Menjawab";
+                modalPanel.className = "glass-panel w-full max-w-xl rounded-3xl p-4 sm:p-6 shadow-2xl border-2 border-cyan-500/60 flex flex-col justify-between max-h-full overflow-y-auto";
+            } else {
+                playerTag.className = "bg-pink-500 text-slate-950 font-bold text-xs px-3 py-1 rounded-full shadow";
+                playerTag.innerText = "Pemain 2 Menjawab";
+                modalPanel.className = "glass-panel w-full max-w-xl rounded-3xl p-4 sm:p-6 shadow-2xl border-2 border-pink-500/60 flex flex-col justify-between max-h-full overflow-y-auto";
+            }
+
+            document.getElementById('block-badge').innerText = `Soal #${questionsAnswered + 1}/20`;
+            document.getElementById('question-text').innerText = q.q;
+
+            const optionsContainer = document.getElementById('options-container');
+            optionsContainer.innerHTML = '';
+
+            q.options.forEach((optText, optIdx) => {
+                const btn = document.createElement('button');
+                btn.className = "option-btn bg-slate-800/90 hover:bg-purple-900/40 border border-slate-700 hover:border-purple-500 text-slate-200 text-xs sm:text-sm p-3 rounded-xl text-left font-medium transition flex items-center justify-between";
+                btn.innerHTML = `
+                    <span>${optText}</span>
+                    <i class="fa-regular fa-circle text-slate-500 text-xs"></i>
+                `;
+                btn.onclick = () => checkAnswer(optIdx, btn);
+                optionsContainer.appendChild(btn);
+            });
+
+            document.getElementById('feedback-text').innerText = '';
+            document.getElementById('close-modal-btn').classList.add('hidden');
+            document.getElementById('question-modal').classList.remove('hidden');
+        }
+
+        // --- GAME LOGIC & TURNS ---
+        function updateTurnUI() {
+            const p1Arena = document.getElementById('p1-arena');
+            const p2Arena = document.getElementById('p2-arena');
+            const indicator = document.getElementById('global-turn-indicator');
+
+            if (currentPlayer === 1) {
+                p1Arena.classList.remove('opacity-60', 'border-cyan-500/30');
+                p1Arena.classList.add('border-cyan-500/80', 'player-arena-active');
+
+                p2Arena.classList.add('opacity-60', 'border-pink-500/30');
+                p2Arena.classList.remove('border-pink-500/80', 'player-arena-active');
+
+                indicator.className = "text-xs sm:text-sm font-bold bg-cyan-500 text-slate-950 px-4 py-1 rounded-full shadow-lg transition-all duration-300 inline-block";
+                indicator.innerHTML = `<i class="fa-solid fa-gamepad mr-1"></i> Giliran Pemain 1: Pilih balok & susun di Papan P1!`;
+            } else {
+                p2Arena.classList.remove('opacity-60', 'border-pink-500/30');
+                p2Arena.classList.add('border-pink-500/80', 'player-arena-active');
+
+                p1Arena.classList.add('opacity-60', 'border-cyan-500/30');
+                p1Arena.classList.remove('border-cyan-500/80', 'player-arena-active');
+
+                indicator.className = "text-xs sm:text-sm font-bold bg-pink-500 text-slate-950 px-4 py-1 rounded-full shadow-lg transition-all duration-300 inline-block";
+                indicator.innerHTML = `<i class="fa-solid fa-gamepad mr-1"></i> Giliran Pemain 2: Pilih balok & susun di Papan P2!`;
+            }
+
+            renderTrays();
+        }
+
+        function checkAnswer(selectedIndex, selectedBtn) {
+            const q = questionsData[activeQuestionIndex];
+            const allOptionBtns = document.querySelectorAll('.option-btn');
+            allOptionBtns.forEach(btn => btn.disabled = true);
+
+            const feedbackText = document.getElementById('feedback-text');
+
+            if (selectedIndex === q.answer) {
+                playSFX('correct');
+                selectedBtn.className = "option-btn bg-emerald-900/50 border-2 border-emerald-500 text-emerald-200 text-xs sm:text-sm p-3 rounded-xl text-left font-semibold flex items-center justify-between shadow-lg";
+                selectedBtn.querySelector('i').className = "fa-solid fa-circle-check text-emerald-400 text-base";
+
+                if (currentPlayer === 1) {
+                    p1Score += 10;
+                    document.getElementById('p1-score').innerText = `${p1Score} Poin`;
+                } else {
+                    p2Score += 10;
+                    document.getElementById('p2-score').innerText = `${p2Score} Poin`;
+                }
+
+                feedbackText.innerHTML = `<span class="text-emerald-400"><i class="fa-solid fa-circle-check"></i> Jawaban Benar! (+10 Poin P${currentPlayer})</span><br><span class="text-slate-400 text-xs font-normal">${q.explain}</span>`;
+            } else {
+                playSFX('wrong');
+                selectedBtn.className = "option-btn bg-rose-900/50 border-2 border-rose-500 text-rose-200 text-xs sm:text-sm p-3 rounded-xl text-left font-semibold flex items-center justify-between shake";
+                selectedBtn.querySelector('i').className = "fa-solid fa-circle-xmark text-rose-400 text-base";
+
+                const correctBtn = allOptionBtns[q.answer];
+                correctBtn.className = "option-btn bg-emerald-900/30 border border-emerald-500/60 text-emerald-300 text-xs sm:text-sm p-3 rounded-xl text-left font-medium flex items-center justify-between";
+
+                feedbackText.innerHTML = `<span class="text-rose-400"><i class="fa-solid fa-circle-xmark"></i> Jawaban Salah! (0 Poin)</span><br><span class="text-slate-400 text-xs font-normal">${q.explain}</span>`;
+            }
+
+            questionsAnswered++;
+            document.getElementById('close-modal-btn').classList.remove('hidden');
+        }
+
+        function closeQuestionModal() {
+            playSFX('blast');
+            document.getElementById('question-modal').classList.add('hidden');
+
+            // Refresh tray for player if empty
+            if (availableShapesP1.every(s => s === null)) generateTrayShapes(1);
+            if (availableShapesP2.every(s => s === null)) generateTrayShapes(2);
+
+            // Switch turn
+            currentPlayer = currentPlayer === 1 ? 2 : 1;
+            updateTurnUI();
+
+            if (questionsAnswered >= 20) {
+                showWinnerScreen();
+            }
+        }
+
+        function showWinnerScreen() {
+            document.getElementById('final-p1').innerText = `${p1Score} Poin`;
+            document.getElementById('final-p2').innerText = `${p2Score} Poin`;
+
+            const winnerTitle = document.getElementById('winnerText');
+            if (p1Score > p2Score) {
+                winnerTitle.innerText = "PEMAIN 1 MENANG!";
+                winnerTitle.className = "title-font text-2xl sm:text-4xl text-cyan-400 mb-2";
+            } else if (p2Score > p1Score) {
+                winnerTitle.innerText = "PEMAIN 2 MENANG!";
+                winnerTitle.className = "title-font text-2xl sm:text-4xl text-pink-400 mb-2";
+            } else {
+                winnerTitle.innerText = "HASIL SERI!";
+                winnerTitle.className = "title-font text-2xl sm:text-4xl text-amber-400 mb-2";
+            }
+
+            document.getElementById('result-screen').classList.remove('hidden');
+        }
+
+        function resetGame() {
+            playSFX('blast');
+            p1Score = 0;
+            p2Score = 0;
+            currentPlayer = 1;
+            questionsAnswered = 0;
+            selectedShapeIndexP1 = null;
+            selectedShapeIndexP2 = null;
+            boardStateP1 = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(null));
+            boardStateP2 = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(null));
+
+            document.getElementById('p1-score').innerText = '0 Poin';
+            document.getElementById('p2-score').innerText = '0 Poin';
+            document.getElementById('result-screen').classList.add('hidden');
+
+            renderBoards();
+            generateTrayShapes(1);
+            generateTrayShapes(2);
+            updateTurnUI();
+        }
+
+        window.onload = function () {
+            renderBoards();
+            generateTrayShapes(1);
+            generateTrayShapes(2);
+            updateTurnUI();
+        };
+    </script>
+</body>
+</html>
